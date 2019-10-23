@@ -16,7 +16,7 @@ function customize_configuration {
     sed -i s/"# services.openssh.enable"/services.openssh.enable/ /mnt/etc/nixos/configuration.nix
 
     # remove the last closing curling bracket, so we can more easily add a block of text
-    sed -i '$ s/}//' /mnt/etc/nixos/configuration.nix
+    sed -i 's/^}$//' /mnt/etc/nixos/configuration.nix
 
     cat >> /mnt/etc/nixos/configuration.nix <<EOF
 users = {
@@ -26,12 +26,18 @@ users = {
         root = {
             initialPassword = "root";
             # hashedPassword = "\$(mkpasswd -m SHA-512)";
-            openssh.authorizedKeys.keys = [ 
-                $(generate_authorized_keys) 
+            openssh.authorizedKeys.keys = [
+                $(generate_authorized_keys)
             ];
         };
     };
 };
+EOF
+
+    # ZFS configuration
+    cat >> /mnt/etc/nixos/configuration.nix <<EOF
+boot.supportedFilesystems = [ "zfs" ];
+networking.hostId = "$(head -c 8 /etc/machine-id)";
 EOF
 
     # and re-add the closing bracket
@@ -64,7 +70,7 @@ function setup_disk {
 
             size=512M, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name=esp
             size=${SWAP_SIZE}, type=0657FD6D-A4AB-43C4-84E5-0933C84B4F4F, name=swap
-            size=${ROOTFS_SIZE}, name=rootfs
+            size=${ROOTFS_SIZE}, type=6A898CC3-1DD2-11B2-99A6-080020736631, name=rootfs
 EOF
 
         BOOT_DEVICE=/dev/disk/by-partlabel/esp
@@ -98,22 +104,17 @@ EOF
     swapon -L swap
 
     # TODO: remove -f
-    mkfs.btrfs -f -L rootfs ${ROOT_DEVICE}
+    zpool create -O mountpoint=none -O compression=lz4 -R /mnt -f rpool ${ROOT_DEVICE}
 
-    # mount the btrfs volume
-    ROOTFS_MOUNT=$(mktemp -d --suffix rootfs)
-    MOUNT_OPTIONS="compress=lzo,autodefrag,noatime,space_cache"
-    mount LABEL=rootfs ${ROOTFS_MOUNT} -o ${MOUNT_OPTIONS}
+    zfs create -o mountpoint=none rpool/ROOT
+    zfs create -o mountpoint=legacy rpool/ROOT/nixos
 
-    # btrfs subvolumes
-    btrfs subvolume create ${ROOTFS_MOUNT}/nixos
-    mount LABEL=rootfs /mnt -o ${MOUNT_OPTIONS},subvol=nixos
-
+    mount -t zfs rpool/ROOT/nixos /mnt
     for i in home nix tmp var
     do
-        btrfs subvolume create ${ROOTFS_MOUNT}/${i}
         mkdir /mnt/${i}
-        mount LABEL=rootfs /mnt/${i} -o ${MOUNT_OPTIONS},subvol=${i}
+        zfs create -o mountpoint=legacy rpool/${i}
+        mount -t zfs rpool/${i} /mnt/${i}
     done
 
     chmod 1777 /mnt/tmp
