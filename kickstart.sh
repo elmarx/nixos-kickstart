@@ -104,7 +104,12 @@ EOF
     swapon -L swap
 
     # TODO: remove -f
-    zpool create -O mountpoint=none -O compression=lz4 -R /mnt -f rpool ${ROOT_DEVICE}
+    zpool create \
+        -O mountpoint=none \
+        -O compression=lz4 \
+        -O xattr=sa \
+        -O acltype=posixacl \
+        -R /mnt -f rpool ${ROOT_DEVICE}
 
     zfs create -o mountpoint=none rpool/ROOT
     zfs create -o mountpoint=legacy rpool/ROOT/nixos
