@@ -44,15 +44,16 @@ EOF
     echo "}" >> /mnt/etc/nixos/configuration.nix
 }
 
-function setup_vagrant {
+setup_vagrant() {
     packer_http=$(cat .packer_http)
     curl -f "$packer_http/configuration.nix" > /mnt/etc/nixos/configuration.nix
     curl -f "$packer_http/vagrant.nix" > /mnt/etc/nixos/vagrant.nix
     echo "{}" > /mnt/etc/nixos/vagrant-hostname.nix
     echo "{}" > /mnt/etc/nixos/vagrant-network.nix
+    echo "{ networking.hostId = \"$(head -c 8 /etc/machine-id)\"; }" > /mnt/etc/nixos/host-id.nix
 }
 
-function generate_authorized_keys {
+generate_authorized_keys() {
     if [ -f /etc/ssh/authorized_keys.d/root ]; then
         cat /etc/ssh/authorized_keys.d/root | awk 'NF {print "\"" $0 "\"" }'
     fi
