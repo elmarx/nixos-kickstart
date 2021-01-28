@@ -1,27 +1,26 @@
 {
   "builders": [
     {
-      "boot_wait": "40s",
       "boot_command": [
         "systemctl start sshd<enter>",
         "echo http://{{ .HTTPIP }}:{{ .HTTPPort}} > .packer_http<enter>",
         "mkdir -m 0700 .ssh<enter>",
         "curl $(cat .packer_http)/install_ed25519.pub > .ssh/authorized_keys<enter>"
       ],
-      "http_directory": "packer",
-      "shutdown_command": "shutdown -h now",
-      "ssh_private_key_file": "./install_ed25519",
-      "ssh_port": 22,
-      "ssh_username": "root",
-      "type": "virtualbox-iso",
-      "iso_url": "https://d3g5gsiof5omrk.cloudfront.net/nixos/18.09/nixos-18.09.1185.9ea650bb5de/nixos-minimal-18.09.1185.9ea650bb5de-x86_64-linux.iso",
-      "iso_checksum": "7ce387b8588454ee25e623e63c69322a2c82f1091670fdf08cb4a2be66090d39",
-      "iso_checksum_type": "sha256",
-      "iso_interface": "sata",
+      "boot_wait": "40s",
       "guest_additions_mode": "disable",
-      "headless": true,
       "guest_os_type": "Linux_64",
       "hard_drive_interface": "sata",
+      "headless": true,
+      "http_directory": "packer",
+      "iso_checksum": "sha256:7ce387b8588454ee25e623e63c69322a2c82f1091670fdf08cb4a2be66090d39",
+      "iso_interface": "sata",
+      "iso_url": "https://d3g5gsiof5omrk.cloudfront.net/nixos/18.09/nixos-18.09.1185.9ea650bb5de/nixos-minimal-18.09.1185.9ea650bb5de-x86_64-linux.iso",
+      "shutdown_command": "shutdown -h now",
+      "ssh_port": 22,
+      "ssh_private_key_file": "./install_ed25519",
+      "ssh_username": "root",
+      "type": "virtualbox-iso",
       "vboxmanage": [
         [
           "modifyvm",
@@ -38,21 +37,22 @@
       ]
     }
   ],
-  "provisioners": [
-    {
-      "type": "shell",
-      "script": "../kickstart.sh",
-      "environment_vars": [
-        "IS_VAGRANT_BUILD=yes"
-      ]
-    }
-  ],
   "post-processors": [
     [
       {
-        "type": "vagrant",
-        "output": "./nixos.box"
+        "output": "./nixos.box",
+        "type": "vagrant"
       }
     ]
+  ],
+  "provisioners": [
+    {
+      "environment_vars": [
+        "IS_VAGRANT_BUILD=yes"
+      ],
+      "script": "../kickstart.sh",
+      "type": "shell"
+    }
   ]
 }
+
